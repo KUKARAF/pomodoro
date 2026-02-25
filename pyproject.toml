@@ -1,6 +1,6 @@
 [project]
 name = "pomodoro"
-version = "0.1.0"
+version = "0.1.1"
 requires-python = ">=3.11"
 dependencies = [
     "today @ git+https://github.com/KUKARAF/today.git",
@@ -8,6 +8,7 @@ dependencies = [
 
 [project.scripts]
 pomodoro = "pomodoro.cli:main"
+distracted = "pomodoro.cli:distracted_main"
 
 [tool.hatch.metadata]
 allow-direct-references = true

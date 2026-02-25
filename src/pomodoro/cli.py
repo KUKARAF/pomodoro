@@ -1,9 +1,16 @@
 import sys
+from datetime import datetime
 
-from pomodoro import Pomodoro
+from pomodoro import Pomodoro, increment_distracted
+from today import DiaryDate
 
 
 def main():
+    if len(sys.argv) == 2 and sys.argv[1] in ('--version', '-V'):
+        from importlib.metadata import version
+        print(f"pomodoro {version('pomodoro')}")
+        return
+
     p = Pomodoro()
     command = sys.argv[1] if len(sys.argv) > 1 else None
 
@@ -57,12 +64,27 @@ def main():
             sys.exit(1)
         sys.stdout.write(output)
 
+    elif command == "distracted":
+        diary = DiaryDate()
+        path = diary.filepath(datetime.now(), create=True)
+        count = increment_distracted(path)
+        print(f"distracted: {count} ({path.name})")
+
     else:
-        print("Usage: pomodoro {start|stop|extend|status|starship|waybar}")
-        print("  start    - Start a new pomodoro work session (optional: duration in minutes)")
-        print("  stop     - Stop the current pomodoro")
-        print("  extend   - Add 10 minutes to current timer")
-        print("  status   - Show current status")
-        print("  starship - Output status for starship prompt")
-        print("  waybar   - Output status for waybar (returns failure when idle)")
+        print("Usage: pomodoro {start|stop|extend|status|starship|waybar|distracted}")
+        print("  start      - Start a new pomodoro work session (optional: duration in minutes)")
+        print("  stop       - Stop the current pomodoro")
+        print("  extend     - Add 10 minutes to current timer")
+        print("  status     - Show current status")
+        print("  starship   - Output status for starship prompt")
+        print("  waybar     - Output status for waybar (returns failure when idle)")
+        print("  distracted - Increment distraction counter for today")
         sys.exit(1)
+
+
+def distracted_main():
+    """Standalone entry point for the distracted command."""
+    diary = DiaryDate()
+    path = diary.filepath(datetime.now(), create=True)
+    count = increment_distracted(path)
+    print(f"distracted: {count} ({path.name})")
