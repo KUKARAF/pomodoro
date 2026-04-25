@@ -13,17 +13,25 @@ from today import DiaryDate, KVManager
 HA_BASE_URL = "https://casa.osmosis.page"
 
 
-def _update_ha_entity(entity_id, value):
-    """Update a Home Assistant input_number entity."""
+def _get_ha_token():
+    """Retrieve the Home Assistant bearer token."""
     try:
         result = subprocess.run(
             ["kv", "get", "HA"], capture_output=True, text=True, timeout=5
         )
-        token = result.stdout.strip()
+        return result.stdout.strip() or None
+    except Exception:
+        return None
+
+
+def _ha_service_call(domain, service, payload):
+    """Call a Home Assistant service."""
+    try:
+        token = _get_ha_token()
         if not token:
             return
-        url = f"{HA_BASE_URL}/api/services/input_number/set_value"
-        data = json.dumps({"entity_id": entity_id, "value": value}).encode()
+        url = f"{HA_BASE_URL}/api/services/{domain}/{service}"
+        data = json.dumps(payload).encode()
         req = urllib.request.Request(
             url,
             data=data,
@@ -35,6 +43,11 @@ def _update_ha_entity(entity_id, value):
         urllib.request.urlopen(req, timeout=5)
     except Exception:
         pass
+
+
+def _update_ha_entity(entity_id, value):
+    """Update a Home Assistant input_number entity."""
+    _ha_service_call("input_number", "set_value", {"entity_id": entity_id, "value": value})
 
 
 WORK_DURATION = 60
@@ -113,6 +126,10 @@ class Pomodoro:
         self.set_state("POMODORO_START_TIME", str(int(time.time())))
 
         self._update_matrix(f"{work_duration}m")
+        _ha_service_call("timer", "start", {
+            "entity_id": "timer.pomodoro",
+            "duration": work_duration * 60,
+        })
 
         pid = os.fork()
         if pid == 0:
@@ -174,6 +191,7 @@ class Pomodoro:
         self.remove_state("POMODORO_TIME")
         self.remove_state("POMODORO_START_TIME")
         self.remove_state("POMODORO_PID")
+        _ha_service_call("timer", "cancel", {"entity_id": "timer.pomodoro"})
 
         today_distractions, _ = self._get_distraction_stats()
         self._update_matrix(f"d: {today_distractions}")
