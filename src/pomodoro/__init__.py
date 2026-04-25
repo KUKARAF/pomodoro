@@ -1,12 +1,41 @@
+import json
 import os
 import re
 import signal
 import subprocess
 import time
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
 from today import DiaryDate, KVManager
+
+HA_BASE_URL = "https://casa.osmosis.page"
+
+
+def _update_ha_entity(entity_id, value):
+    """Update a Home Assistant input_number entity."""
+    try:
+        result = subprocess.run(
+            ["kv", "get", "HA"], capture_output=True, text=True, timeout=5
+        )
+        token = result.stdout.strip()
+        if not token:
+            return
+        url = f"{HA_BASE_URL}/api/services/input_number/set_value"
+        data = json.dumps({"entity_id": entity_id, "value": value}).encode()
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass
+
 
 WORK_DURATION = 60
 BREAK_DURATION = 10
@@ -109,6 +138,7 @@ class Pomodoro:
         kv = KVManager()
         diary_path = str(diary.filepath(datetime.today(), create=True))
         kv.add(diary_path, "pomodoro", 1)
+        _update_ha_entity("input_number.epaper_pomodoros", kv.get([diary_path], "pomodoro"))
 
         self.set_state("POMODORO_STATE", "break")
         self.set_state("POMODORO_TIME", str(BREAK_DURATION))
@@ -259,4 +289,5 @@ def increment_distracted(path):
         count = 1
         path.write_text(f"---\ndistracted: {count}\n---\n{text}", encoding="utf-8")
 
+    _update_ha_entity("input_number.epaper_distractions", count)
     return count
