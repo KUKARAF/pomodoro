@@ -101,9 +101,9 @@ class Pomodoro:
         diary = DiaryDate()
         kv = KVManager()
         today_path = str(diary.filepath(datetime.today(), create=False))
-        today_distractions = kv.get([today_path], "distractions")
+        today_distractions = kv.get([today_path], "distracted")
         week_paths = [str(p) for p in diary.week_files()]
-        weekly_avg = kv.get(week_paths, "distractions") if week_paths else 0
+        weekly_avg = kv.get(week_paths, "distracted") if week_paths else 0
         return today_distractions, weekly_avg
 
     def start(self, duration=None):
